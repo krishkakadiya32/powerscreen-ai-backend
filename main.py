@@ -1,5 +1,5 @@
 """
-PowerScreen AI — Premium Backend  v4.0.0
+PowerScreen AI — Premium Backend  v5.0.0
 FastAPI server: chat, streaming, screen analysis, file analysis, web search.
 Supports OpenAI and Groq interchangeably via environment variables.
 """
@@ -55,14 +55,14 @@ if PROVIDER == "openai":
     _DEFAULT_TEXT   = os.getenv("TEXT_MODEL",   "gpt-4o-mini")
     _DEFAULT_VISION = os.getenv("VISION_MODEL", "gpt-4o-mini")
 else:
-    _DEFAULT_TEXT   = os.getenv("TEXT_MODEL",   "meta-llama/llama-4-scout-17b-16e-instruct")
-    _DEFAULT_VISION = os.getenv("VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+    _DEFAULT_TEXT   = os.getenv("TEXT_MODEL",   "llama-3.3-70b-versatile")
+    _DEFAULT_VISION = os.getenv("VISION_MODEL", "llama-3.3-70b-versatile")
 
 MAX_FILE_CHARS     = int(os.getenv("MAX_FILE_CHARS",     "80000"))
 MAX_HISTORY_TURNS  = int(os.getenv("MAX_HISTORY_TURNS",  "12"))
 MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", "5"))
 MAX_UPLOAD_MB      = int(os.getenv("MAX_UPLOAD_MB",      "20"))
-APP_VERSION        = "4.0.0"
+APP_VERSION        = "5.0.0"
 
 # Synchronous client (used for non-streaming calls)
 _sync_client = OpenAI(api_key=_API_KEY, base_url=_BASE_URL)  # type: ignore[arg-type]
