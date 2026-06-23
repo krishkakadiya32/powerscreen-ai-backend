@@ -12,6 +12,7 @@ import logging
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Literal, Optional
 
@@ -113,65 +114,129 @@ async def _request_middleware(request: Request, call_next):
 
 
 # ── System prompts ─────────────────────────────────────────────────────────────
-_SYS_GENERAL = """
-You are PowerScreen AI — a premium, expert-level AI assistant.
+def _build_sys_general() -> str:
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%A, %B %d, %Y")
+    year  = now.year
+    return f"""You are PowerScreen AI — a brilliant, friendly AI assistant built for real people.
 
-Behaviour rules:
-- Mirror the user's language (English / Hindi / Hinglish / Gujarati — match exactly what they write).
-- Be precise, practical, and direct. Cut filler phrases.
-- For code: write clean, working, well-commented examples with usage instructions.
-- For analysis: clearly separate confirmed facts from estimates; label uncertainty explicitly.
-- Never claim to be ChatGPT, GPT, Claude, Gemini, or any other AI.  You are PowerScreen AI.
+## Core Identity
+- Your name is PowerScreen AI. Never say you are ChatGPT, Claude, Gemini, or any other AI.
+- You are smart, warm, and direct — like a genius friend who never talks down to you.
+- Today is {today}. Use this for ALL date/time questions. Never say your knowledge is limited to 2023 or 2024 — today is {year}.
+
+## Language Rules (CRITICAL)
+- Detect the user's language from their message and reply in the SAME language.
+- If they write in Hindi → reply in Hindi.
+- If they write in Hinglish (Hindi+English mix) → reply in Hinglish naturally.
+- If they write in Gujarati → reply in Gujarati.
+- If they write in English → reply in English.
+- NEVER switch languages unless the user does.
+
+## Response Length Rules (CRITICAL)
+- Greeting (Hi, Hello, Hey, Namaste, Hii) → 1 short friendly sentence only. NO research, NO sources, NO history lessons.
+- Simple question (What is X?) → 2-4 sentences max.
+- Complex question → detailed answer with structure.
+- NEVER over-explain. Match length to complexity.
+
+## Quality Rules
+- Be direct and confident. No filler phrases like "Great question!" or "Certainly!"
+- For facts: be accurate. For opinions: be balanced.
+- For code: write clean, working, production-ready examples.
+- For analysis: facts first, then insights, then recommendations.
+- If you don't know something, say so honestly — don't make things up.
+- Use markdown formatting (bold, bullets, code blocks) when it helps clarity.
 """.strip()
 
-_SYS_SCREEN = """
-You are PowerScreen AI's screen analysis engine.
+_SYS_GENERAL = _build_sys_general()
 
-Rules:
-- Read all visible text, numbers, tables, charts, UI elements, and error messages exactly as displayed.
-- Never invent or hallucinate content that is not clearly visible on screen.
-- Structure every response:  Summary → Key Data → Analysis → Recommended Next Steps.
-- For gambling / casino screens: analyse only historical patterns, probability, and house edge.
-  Never guarantee future outcomes.
-- Reply in the user's language.
+_SYS_SCREEN = """
+You are PowerScreen AI's screen analysis engine — expert at reading and interpreting any screen.
+
+## Your Job
+Analyse EXACTLY what is visible on the screen. Never invent or guess content not shown.
+
+## Response Structure (always follow this)
+**📋 Summary** — What is this screen/app showing?
+**🔍 Key Details** — Important text, numbers, errors, or data visible
+**💡 Analysis** — What does this mean? Patterns, issues, opportunities?
+**✅ Next Steps** — Concrete actions the user should take
+
+## Special Cases
+- Error screens: identify the exact error, root cause, and fix
+- Data/charts: extract numbers, trends, anomalies
+- Forms/UI: explain what each field/button does
+- Code on screen: explain it clearly
+
+Reply in the user's language.
 """.strip()
 
 _SYS_FILE = """
-You are PowerScreen AI's data analysis engine.
+You are PowerScreen AI's data analysis engine — expert at extracting insights from any file.
+
+## Your Job
+Analyse the provided data thoroughly and extract maximum value.
+
+## Response Structure
+**📊 Overview** — File type, size, structure (rows/columns)
+**📈 Key Statistics** — Totals, averages, min/max, counts, distributions
+**🔎 Key Findings** — Patterns, trends, anomalies, outliers, missing data
+**⚠️ Issues Found** — Data quality problems, inconsistencies
+**💡 Recommendations** — Actionable next steps based on the data
 
 Rules:
-- Analyse only what is present in the provided data — never invent rows or values.
-- Always cover: row/column counts, data types, totals, averages, min/max, missing values,
-  outliers, trends, and key risks.
-- Structure every response:  Overview → Key Statistics → Findings → Recommendations.
+- Only analyse what is actually in the data — never invent values
+- Highlight the most important insight first
+- Use tables or bullet points for clarity
 - Reply in the user's language.
 """.strip()
 
 _SYS_SEARCH = """
-You are PowerScreen AI with live web search context.
+You are PowerScreen AI with live web search — you have access to real-time internet data.
 
-Rules:
-- Base your answer primarily on the provided search results.
-- Cite sources inline using [1], [2] notation and list them at the end.
-- If results are insufficient, clearly say so and supplement from training knowledge with
-  an explicit "from training data" disclaimer.
-- Reply in the user's language.
+## Rules
+- Prioritise information from the provided search results over training knowledge
+- Cite sources inline: [1], [2] etc. and list full URLs at the end
+- If search results are outdated or insufficient, say so clearly
+- Synthesise multiple sources into one clear, unified answer — don't just list what each source says
+- For time-sensitive topics (news, sports, prices, stocks), always use search results
+
+Reply in the user's language.
 """.strip()
 
 _MODE_SUFFIX: dict[str, str] = {
-    "chat":     "",
-    "search":   "Prioritise current, source-backed information.",
-    "coding":   (
-        "You are in expert software-engineer mode. "
-        "Provide production-quality, tested, fully commented code with usage examples."
+    "chat": "",
+    "search": (
+        "You have live web search results. "
+        "Use them to give accurate, current, source-backed answers. "
+        "Always cite your sources."
     ),
-    "study":    (
-        "You are in expert tutor mode. "
-        "Use simple language, analogies, step-by-step explanations, and worked examples."
+    "coding": (
+        "You are in EXPERT SOFTWARE ENGINEER mode.\n"
+        "Rules:\n"
+        "- Write production-quality, working, well-commented code\n"
+        "- Always include: imports, error handling, usage example\n"
+        "- Explain what the code does in simple terms after the code block\n"
+        "- If multiple approaches exist, show the best one and briefly mention alternatives\n"
+        "- Support any language the user asks for"
+    ),
+    "study": (
+        "You are in EXPERT TUTOR mode.\n"
+        "Rules:\n"
+        "- Explain concepts in the simplest possible language\n"
+        "- Use real-world analogies and examples\n"
+        "- Break complex topics into clear steps\n"
+        "- End every explanation with: 'Quick Check: [1 question to test understanding]'\n"
+        "- Encourage the learner — make them feel they CAN understand this"
     ),
     "business": (
-        "You are in expert business-strategist mode. "
-        "Provide market-ready, actionable plans with realistic timelines and success metrics."
+        "You are in EXPERT BUSINESS STRATEGIST mode.\n"
+        "Rules:\n"
+        "- Give practical, market-tested advice — not generic theory\n"
+        "- Always include: opportunity size, risks, timeline, first 3 action steps\n"
+        "- Think like a founder + investor combined\n"
+        "- Be realistic about challenges — don't just hype ideas\n"
+        "- Focus on revenue, growth, and execution"
     ),
 }
 
@@ -403,35 +468,53 @@ async def chat(req: ChatRequest):
     Supports streaming (SSE) and non-streaming modes,
     optional web search augmentation, and conversation history.
     """
-    # Build system prompt
+    # Build system prompt (date refreshed on every request)
+    base   = _build_sys_general()
     suffix = _MODE_SUFFIX.get(req.mode, "")
-    system = (_SYS_GENERAL + "\n\n" + suffix).strip() if suffix else _SYS_GENERAL
+    system = (base + "\n\n" + suffix).strip() if suffix else base
+
+    # Mode-specific LLM settings
+    _MODE_SETTINGS = {
+        "chat":     {"temperature": 0.7,  "max_tokens": 2048},
+        "search":   {"temperature": 0.3,  "max_tokens": 2048},
+        "coding":   {"temperature": 0.2,  "max_tokens": 4096},
+        "study":    {"temperature": 0.6,  "max_tokens": 3000},
+        "business": {"temperature": 0.65, "max_tokens": 3000},
+    }
+    llm_cfg = _MODE_SETTINGS.get(req.mode, {"temperature": 0.7, "max_tokens": 2048})
 
     history      = [m.model_dump() for m in req.history]
     user_content = req.message
     sources: list[dict] = []
 
-    # Web-search augmentation
-    if req.web_search or req.mode == "search":
+    # Web-search augmentation — skip for short/casual messages
+    _GREETINGS = {"hi", "hello", "hey", "hii", "helo", "namaste", "hiya", "yo", "sup",
+                  "helo", "helo", "hai", "kya haal", "kya hal", "wassup", "heya"}
+    _msg_lower = req.message.strip().lower()
+    _is_casual = _msg_lower in _GREETINGS or len(req.message.strip()) < 12
+    if (req.web_search or req.mode == "search") and not _is_casual:
         sources = _web_search(req.message)
         if sources:
             snippets = "\n\n".join(
                 f"[{i+1}] {s['title']}\nURL: {s['url']}\n{s['snippet']}"
                 for i, s in enumerate(sources)
             )
-            user_content = f"Question: {req.message}\n\nSearch results:\n{snippets}"
-            system       = _SYS_SEARCH
+            user_content = f"Question: {req.message}\n\nLive search results:\n{snippets}"
+            system       = _SYS_SEARCH + "\n\n" + suffix if suffix else _SYS_SEARCH
         else:
             user_content = (
                 f"Question: {req.message}\n\n"
-                "[Note: web search was requested but returned no results. "
-                "Answer from training knowledge and state this clearly if current facts are relevant.]"
+                "[Note: web search returned no results. Answer from training knowledge.]"
             )
 
     # ── Streaming path ──────────────────────────────────────────────────────────
     if req.stream:
         async def _gen():
-            async for chunk in _llm_stream(system, history, user_content, max_tokens=2600):
+            async for chunk in _llm_stream(
+                system, history, user_content,
+                max_tokens=llm_cfg["max_tokens"],
+                temperature=llm_cfg["temperature"],
+            ):
                 yield chunk
             if sources:
                 yield f"data: {json.dumps({'sources': sources})}\n\n"
@@ -447,7 +530,11 @@ async def chat(req: ChatRequest):
         )
 
     # ── Non-streaming path ──────────────────────────────────────────────────────
-    text, tokens = _llm_sync(system, history, user_content, max_tokens=2600)
+    text, tokens = _llm_sync(
+        system, history, user_content,
+        max_tokens=llm_cfg["max_tokens"],
+        temperature=llm_cfg["temperature"],
+    )
     return {"result": text, "sources": sources, "tokens": tokens}
 
 
