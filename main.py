@@ -3,9 +3,7 @@ PowerScreen AI — Premium Backend  v5.0.0
 FastAPI server: chat, streaming, screen analysis, file analysis, web search.
 Supports OpenAI and Groq interchangeably via environment variables.
 """
-
 from __future__ import annotations
-
 import io
 import json
 import logging
@@ -15,7 +13,6 @@ import uuid
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Literal, Optional
-
 import pandas as pd
 import requests
 from dotenv import load_dotenv
@@ -25,7 +22,6 @@ from fastapi.responses import StreamingResponse
 from openai import APIError, AsyncOpenAI, OpenAI, RateLimitError
 from pydantic import BaseModel, Field
 from pypdf import PdfReader
-
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
@@ -33,31 +29,25 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger("powerscreen")
-
 # ── Configuration ──────────────────────────────────────────────────────────────
 load_dotenv()
-
 OPENAI_KEY: str = os.getenv("OPENAI_API_KEY", "")
 GROQ_KEY:   str = os.getenv("GROQ_API_KEY", "")
-
 if not (OPENAI_KEY or GROQ_KEY):
     raise RuntimeError(
         "No API key configured. "
         "Set OPENAI_API_KEY or GROQ_API_KEY in your .env file."
     )
-
 PROVIDER  = "openai" if OPENAI_KEY else "groq"
 _API_KEY  = OPENAI_KEY or GROQ_KEY
 _BASE_URL = None if PROVIDER == "openai" else "https://api.groq.com/openai/v1"
-
 # Default models per provider
 if PROVIDER == "openai":
     _DEFAULT_TEXT   = os.getenv("TEXT_MODEL",   "gpt-4o-mini")
     _DEFAULT_VISION = os.getenv("VISION_MODEL", "gpt-4o-mini")
 else:
     _DEFAULT_TEXT   = os.getenv("TEXT_MODEL",   "llama-3.3-70b-versatile")
-    _DEFAULT_VISION = os.getenv("VISION_MODEL", "llama-3.2-11b-vision-preview")
-
+    _DEFAULT_VISION = "meta-llama/llama-4-scout-17b-16e-instruct"
 MAX_FILE_CHARS     = int(os.getenv("MAX_FILE_CHARS",     "80000"))
 MAX_HISTORY_TURNS  = int(os.getenv("MAX_HISTORY_TURNS",  "12"))
 MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", "5"))
