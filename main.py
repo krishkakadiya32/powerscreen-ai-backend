@@ -56,7 +56,7 @@ if PROVIDER == "openai":
     _DEFAULT_VISION = os.getenv("VISION_MODEL", "gpt-4o-mini")
 else:
     _DEFAULT_TEXT   = os.getenv("TEXT_MODEL",   "llama-3.3-70b-versatile")
-    _DEFAULT_VISION = os.getenv("VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+    _DEFAULT_VISION = os.getenv("VISION_MODEL", "llama-3.2-11b-vision-preview")
 
 MAX_FILE_CHARS     = int(os.getenv("MAX_FILE_CHARS",     "80000"))
 MAX_HISTORY_TURNS  = int(os.getenv("MAX_HISTORY_TURNS",  "12"))
