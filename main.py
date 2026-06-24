@@ -558,9 +558,8 @@ async def analyse_image(req: ImageAnalysisRequest):
         resp   = _sync_client.chat.completions.create(
             model=_DEFAULT_VISION,
             messages=[
-                {"role": "system", "content": _SYS_SCREEN},
-                {"role": "user",   "content": [
-                    {"type": "text",      "text": req.command},
+                {"role": "user", "content": [
+                    {"type": "text",      "text": f"{_SYS_SCREEN}\n\n{req.command}"},
                     {"type": "image_url", "image_url": {"url": img_url}},
                 ]},
             ],
