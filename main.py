@@ -553,26 +553,37 @@ async def analyse_text(req: TextAnalysisRequest):
 async def analyse_image(req: ImageAnalysisRequest):
     """Analyse a base64-encoded screenshot or image."""
     img     = req.image_base64.strip()
-    img_url = img if img.startswith("data:image") else f"data:image/png;base64,{img}"
+    img_url = img if img.startswith("data:image") else f"data:image/jpeg;base64,{img}"
     try:
-        resp   = _sync_client.chat.completions.create(
-            model=_DEFAULT_VISION,
-            messages=[
+        # Use requests directly — OpenAI SDK has compatibility issues with Groq vision
+        api_url = "https://api.groq.com/openai/v1/chat/completions" if PROVIDER == "groq" else "https://api.openai.com/v1/chat/completions"
+        payload = {
+            "model": _DEFAULT_VISION,
+            "messages": [
                 {"role": "user", "content": [
                     {"type": "text",      "text": f"{_SYS_SCREEN}\n\n{req.command}"},
                     {"type": "image_url", "image_url": {"url": img_url}},
                 ]},
             ],
-            temperature=0.2,
-            max_tokens=3000,
+            "temperature": 0.2,
+            "max_tokens": 3000,
+        }
+        r = requests.post(
+            api_url,
+            headers={"Authorization": f"Bearer {_API_KEY}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=60,
         )
-        text   = resp.choices[0].message.content or ""
-        tokens = resp.usage.total_tokens if resp.usage else 0
+        if not r.ok:
+            raise HTTPException(502, f"Vision API error: {r.text}")
+        data   = r.json()
+        text   = data["choices"][0]["message"]["content"] or ""
+        tokens = data.get("usage", {}).get("total_tokens", 0)
         return {"result": text, "tokens": tokens}
-    except RateLimitError:
-        raise HTTPException(429, "Rate limit reached — please wait and retry.")
-    except APIError as exc:
-        raise HTTPException(502, f"Vision API error: {exc.message}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(502, f"Vision API error: {exc}")
 
 
 @app.post("/analyse-file", tags=["ai"])
