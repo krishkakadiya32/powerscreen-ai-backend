@@ -549,13 +549,45 @@ async def analyse_text(req: TextAnalysisRequest):
     return {"result": text, "tokens": tokens}
 
 
+@app.get("/test-vision", tags=["debug"])
+def test_vision():
+    """Debug: call vision API with a tiny hardcoded 1x1 white JPEG."""
+    # Minimal valid 1x1 white JPEG in base64
+    tiny = (
+        "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U"
+        "HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARCAABAAEDASIA"
+        "AhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAU"
+        "AQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8A"
+        "JQAB/9k="
+    )
+    api_url = "https://api.groq.com/openai/v1/chat/completions" if PROVIDER == "groq" else "https://api.openai.com/v1/chat/completions"
+    payload = {
+        "model": _DEFAULT_VISION,
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": "What color is this image? Reply in one word."},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{tiny}"}},
+        ]}],
+        "temperature": 0.2,
+        "max_completion_tokens": 50,
+    }
+    try:
+        r = requests.post(
+            api_url,
+            headers={"Authorization": f"Bearer {_API_KEY}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=30,
+        )
+        return {"http_status": r.status_code, "groq_response": r.json()}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 @app.post("/analyse-image", tags=["ai"])
 async def analyse_image(req: ImageAnalysisRequest):
     """Analyse a base64-encoded screenshot or image."""
     img     = req.image_base64.strip()
     img_url = img if img.startswith("data:image") else f"data:image/jpeg;base64,{img}"
     try:
-        # Use requests directly — OpenAI SDK has compatibility issues with Groq vision
         api_url = "https://api.groq.com/openai/v1/chat/completions" if PROVIDER == "groq" else "https://api.openai.com/v1/chat/completions"
         payload = {
             "model": _DEFAULT_VISION,
@@ -566,7 +598,7 @@ async def analyse_image(req: ImageAnalysisRequest):
                 ]},
             ],
             "temperature": 0.2,
-            "max_tokens": 3000,
+            "max_completion_tokens": 3000,
         }
         r = requests.post(
             api_url,
