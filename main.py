@@ -52,7 +52,7 @@ MAX_FILE_CHARS     = int(os.getenv("MAX_FILE_CHARS",     "80000"))
 MAX_HISTORY_TURNS  = int(os.getenv("MAX_HISTORY_TURNS",  "12"))
 MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", "5"))
 MAX_UPLOAD_MB      = int(os.getenv("MAX_UPLOAD_MB",      "20"))
-APP_VERSION        = "5.0.0"
+APP_VERSION        = "6.0.0"
 
 # Synchronous client (used for non-streaming calls)
 _sync_client = OpenAI(api_key=_API_KEY, base_url=_BASE_URL)  # type: ignore[arg-type]
