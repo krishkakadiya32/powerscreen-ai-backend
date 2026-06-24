@@ -56,7 +56,7 @@ if PROVIDER == "openai":
     _DEFAULT_VISION = os.getenv("VISION_MODEL", "gpt-4o-mini")
 else:
     _DEFAULT_TEXT   = os.getenv("TEXT_MODEL",   "llama-3.3-70b-versatile")
-    _DEFAULT_VISION = os.getenv("VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+    _DEFAULT_VISION = os.getenv("VISION_MODEL", "llama-3.2-11b-vision-preview")
 
 MAX_FILE_CHARS     = int(os.getenv("MAX_FILE_CHARS",     "80000"))
 MAX_HISTORY_TURNS  = int(os.getenv("MAX_HISTORY_TURNS",  "12"))
@@ -551,8 +551,8 @@ async def analyse_text(req: TextAnalysisRequest):
 
 @app.get("/test-vision", tags=["debug"])
 def test_vision():
-    """Debug: call vision API with a tiny hardcoded 1x1 white JPEG."""
-    # Minimal valid 1x1 white JPEG in base64
+    """Debug: call vision API with a tiny hardcoded 1×1 white JPEG."""
+    # Minimal valid 1×1 white JPEG in base64
     tiny = (
         "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U"
         "HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARCAABAAEDASIA"
@@ -641,3 +641,4 @@ async def analyse_file(command: str = Form(...), file: UploadFile = File(...)):
         max_tokens=3000, temperature=0.2,
     )
     return {"result": text, "filename": file.filename, "tokens": tokens}
+
