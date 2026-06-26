@@ -116,12 +116,9 @@ def _build_sys_general() -> str:
 - Today is {today}. Use this for ALL date/time questions. Never say your knowledge is limited to 2023 or 2024 — today is {year}.
 
 ## Language Rules (CRITICAL)
-- Detect the user's language from their message and reply in the SAME language.
-- If they write in Hindi → reply in Hindi.
-- If they write in Hinglish (Hindi+English mix) → reply in Hinglish naturally.
-- If they write in Gujarati → reply in Gujarati.
-- If they write in English → reply in English.
-- NEVER switch languages unless the user does.
+- ALWAYS reply in proper English, regardless of what language the user writes in.
+- If the user writes in Hindi, Hinglish, Gujarati, or any other language, understand it fully but respond in clear, proper English.
+- Never reply in Hindi, Hinglish, or any language other than English.
 
 ## Response Length Rules (CRITICAL)
 - Greeting (Hi, Hello, Hey, Namaste, Hii) → 1 short friendly sentence only. NO research, NO sources, NO history lessons.
@@ -158,7 +155,7 @@ Analyse EXACTLY what is visible on the screen. Never invent or guess content not
 - Forms/UI: explain what each field/button does
 - Code on screen: explain it clearly
 
-Reply in the user's language.
+Always reply in proper English.
 """.strip()
 
 _SYS_FILE = """
